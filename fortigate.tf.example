@@ -1,0 +1,45 @@
+// create FortiGate instances
+resource "oci_core_instance" "fgt1" {
+  availability_domain = lookup(data.oci_identity_availability_domains.ads.availability_domains[var.availability_domain - 1], "name")
+  compartment_id      = var.compartment_ocid
+  display_name        = "${var.cust_id}_${var.env}_fgt1"
+  shape               = var.instance_shape
+
+  create_vnic_details {
+    subnet_id        = oci_core_subnet.untrust_subnet.id
+    display_name     = "${var.cust_id}_${var.env}_fgt1_unt"
+    assign_public_ip = true
+    hostname_label   = "${var.cust_id}_${var.env}_fgt1_unt"
+  }
+
+  launch_options {
+    network_type = "PARAVIRTUALIZED"
+  }
+
+  source_details {
+    source_type             = "image"
+    source_id               = local.mp_listing_resource_id // marketplace listing
+    boot_volume_size_in_gbs = "50"
+  }
+
+  // Required for bootstrapp
+  // Commnet out the following if you use the feature.
+  metadata = {
+    user_data = "${base64encode(data.template_file.userdata_lic.rendered)}"
+  }
+
+  timeouts {
+    create = "60m"
+  }
+}
+
+// For bootstrapping cloud-init
+data "template_file" "userdata_lic" {
+  template = file("${var.bootstrap}")
+
+  vars = {
+    license_file = "${file("${var.license}")}"
+    port2_ip     = var.trust_private_ip_primary
+    port2_mask   = var.trust_private_mask
+  }
+}
