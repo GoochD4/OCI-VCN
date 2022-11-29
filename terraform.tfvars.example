@@ -1,0 +1,2 @@
+region           = "us-ashburn-1"
+#private_key_path = "/home/ec2-user/.oci/oci_api_key.pem"
